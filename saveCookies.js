@@ -36,7 +36,7 @@ const fs = require('fs');
     JSON.stringify(storage, null, 2)
   );
 
-  console.log("🍪 Cookies completas guardadas en cookies_completas.json");
+  console.log("🍪 Cookies completas guardadas en cookies.json");
 
   // =============================
   // 🔍 VERIFICACIÓN (opcional)
