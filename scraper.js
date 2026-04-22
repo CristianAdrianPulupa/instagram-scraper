@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const fs = require("fs");
 
 (async () => {
   const browser = await chromium.launch({
@@ -11,76 +12,26 @@ const { chromium } = require('playwright');
 
   const page = await context.newPage();
 
-  const username = "marvel"; // cambia aquí
+  const username = "Marvel";
+  const LIMIT = 10;
 
   console.log("🌐 Entrando a Instagram...");
 
   await page.goto('https://www.instagram.com/', {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(3000);
 
-  console.log("📡 Haciendo request interna...");
+  // =========================
+  // 📊 PERFIL (AGREGADO)
+  // =========================
+  console.log("📡 Obteniendo perfil...");
 
-  // 🔥 FORZAR REQUEST (clave)
-  const data = await page.evaluate(async (username) => {
+  const profile = await page.evaluate(async (username) => {
+
     const res = await fetch(
       `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`,
-      {
-        method: "GET",
-        credentials: "include", // 👈 usa cookies
-        headers: {
-          "x-ig-app-id": "936619743392459"
-        }
-      }
-    );
-
-    const json = await res.json();
-    return json.data.user;
-  }, username);
-
-  if (!data) {
-    console.log("❌ No se pudieron obtener datos");
-    return;
-  }
-
-  // =========================
-  // 📊 PERFIL
-  // =========================
-console.log("📊 PERFIL:");
-console.log({
-  username: data.username,
-  nombre: data.full_name,
-  publicaciones: data.edge_owner_to_timeline_media?.count,
-  seguidores: data.edge_followed_by?.count,
-  seguidos: data.edge_follow?.count,
-  bio: data.biography
-});
-
-const posts = (data.edge_owner_to_timeline_media?.edges || [])
-  .slice(0, 5)
-  .map(p => ({
-    url: `https://www.instagram.com/p/${p.node.shortcode}/`,
-    likes: p.node.edge_liked_by?.count || 0,
-    comentarios: p.node.edge_media_to_comment?.count || 0,
-    caption: p.node.edge_media_to_caption?.edges[0]?.node.text || ""
-  }));
-
-console.log("📸 POSTS:");
-console.log(posts);
-
-// =========================
-// 📸 POSTS DESDE PERFIL (con fallback)
-// =========================
-let edges = data.edge_owner_to_timeline_media?.edges || [];
-
-if (edges.length === 0) {
-  console.log("⚠️ No vinieron posts en la primera respuesta, intentando paginación...");
-
-  const moreData = await page.evaluate(async (username) => {
-    const res = await fetch(
-      `https://www.instagram.com/api/v1/feed/user/${username}/username/?count=5`,
       {
         method: "GET",
         credentials: "include",
@@ -90,37 +41,119 @@ if (edges.length === 0) {
       }
     );
 
-    try {
-      return await res.json();
-    } catch {
-      return null;
-    }
-  }, data.username);
+    const json = await res.json();
+    return json?.data?.user || null;
 
-  if (moreData && moreData.items) {
-    const posts = moreData.items.slice(0, 5).map(p => ({
-      url: `https://www.instagram.com/p/${p.code}/`,
-      likes: p.like_count,
-      comentarios: p.comment_count,
-      caption: p.caption?.text || ""
-    }));
+  }, username);
 
-    console.log("📸 POSTS (fallback API):");
-    console.log(posts);
-  } else {
-    console.log("❌ Tampoco se pudieron obtener posts");
+  let profileData = null;
+
+if (profile) {
+  profileData = {
+    username: profile.username,
+    nombre: profile.full_name,
+    seguidores: profile.edge_followed_by?.count,
+    seguidos: profile.edge_follow?.count,
+    publicaciones: profile.edge_owner_to_timeline_media?.count,
+    bio: profile.biography
+  };
+
+  console.log("📊 PERFIL:");
+  console.log(profileData);
+}else {
+    console.log("❌ No se pudo obtener el perfil");
   }
 
-} else {
-  const posts = edges.slice(0, 5).map(p => ({
-    url: `https://www.instagram.com/p/${p.node.shortcode}/`,
-    likes: p.node.edge_liked_by?.count || 0,
-    comentarios: p.node.edge_media_to_comment?.count || 0,
-    caption: p.node.edge_media_to_caption?.edges[0]?.node.text || ""
-  }));
+  console.log("📡 Obteniendo posts...");
 
-  console.log("📸 POSTS:");
-  console.log(posts);
-}
+  // =========================
+  // SOLO PAGINACIÓN (PRO)
+  // =========================
+  let allPosts = [];
+  let maxId = null;
+  let hasMore = true;
+  let safety = 0;
+  const seen = new Set();
+
+  while (hasMore && allPosts.length < LIMIT) {
+
+    safety++;
+    if (safety > 10) break;
+
+    const result = await page.evaluate(async ({ username, maxId }) => {
+
+      let url = `https://www.instagram.com/api/v1/feed/user/${username}/username/?count=20`;
+
+      if (maxId) {
+        url += `&max_id=${maxId}`;
+      }
+
+      const res = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "x-ig-app-id": "936619743392459"
+        }
+      });
+
+      const text = await res.text();
+
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+
+    }, { username, maxId });
+
+    if (!result?.items) {
+      console.log("❌ Error obteniendo posts");
+      break;
+    }
+
+    for (const p of result.items) {
+
+      if (allPosts.length >= LIMIT) break;
+      if (seen.has(p.code)) continue;
+
+      seen.add(p.code);
+
+      allPosts.push({
+        url: `https://www.instagram.com/p/${p.code}/`,
+        likes: p.like_count || 0,
+        comentarios: p.comment_count || 0,
+        caption: p.caption?.text || ""
+      });
+    }
+
+    console.log(`📥 Post Obtenidos: ${allPosts.length}`);
+
+    maxId = result.next_max_id;
+
+    if (!maxId) {
+      hasMore = false;
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  console.log("📸 TOTAL POSTS:");
+  console.log("TOTAL:", allPosts.length);
+  console.table(allPosts);
+
+  // =========================
+  // 💾 EXPORTACIÓN JSON (AGREGADO)
+  // =========================
+  const finalData = {
+  perfil: profileData,
+  posts: allPosts
+};
+  fs.writeFileSync(
+  "instagram_data.json",
+  JSON.stringify(finalData, null, 2)
+);
+
+  console.log("💾 Archivo posts.json creado correctamente");
+
   await browser.close();
 })();

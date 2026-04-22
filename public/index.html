@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Instagram Viewer</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      background: #fafafa;
+      color: #262626;
+    }
+
+    header {
+      background: white;
+      padding: 15px 20px;
+      border-bottom: 1px solid #dbdbdb;
+      position: sticky;
+      top: 0;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 20px 0 10px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    /* PERFIL */
+    #perfil {
+      background: white;
+      border: 1px solid #dbdbdb;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    #perfil img {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ff4d6d;
+    }
+
+    #perfil .info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #perfil .info strong {
+      font-size: 18px;
+    }
+
+    /* POSTS */
+    #posts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .post {
+      background: white;
+      border: 1px solid #dbdbdb;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+
+    .post:hover {
+      transform: translateY(-5px);
+    }
+
+    .post img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+    }
+
+    .post .content {
+      padding: 10px;
+    }
+
+    .post .likes {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .post .caption {
+      font-size: 14px;
+      color: #555;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    📸 Instagram Viewer
+  </header>
+
+  <div class="container">
+
+    <h1>Perfil</h1>
+    <div id="perfil"></div>
+
+    <h1>Posts</h1>
+    <div id="posts"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+.post {
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+}
+
+.post-header img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+.actions {
+  display: flex;
+  gap: 15px;
+  padding: 10px;
+  font-size: 20px;
+}
+
+.content {
+  padding: 0 10px 15px;
+}
+
+.likes {
+  font-weight: bold;
+}
