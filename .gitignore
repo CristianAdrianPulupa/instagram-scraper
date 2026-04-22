@@ -1,4 +1,4 @@
 .venv/
-__pycache__/
+```bash id="c1xj5u"
+node_modules/
 cookies.json
-*.pyc
