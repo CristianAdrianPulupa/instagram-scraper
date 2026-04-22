@@ -12,7 +12,7 @@ const fs = require("fs");
 
   const page = await context.newPage();
 
-  const username = "Marvel";
+  const username = "netflix";
   const LIMIT = 10;
 
   console.log("🌐 Entrando a Instagram...");

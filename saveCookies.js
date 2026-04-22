@@ -2,83 +2,55 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 
 (async () => {
-  const userDataDir = "C:\\Users\\pulup\\AppData\\Local\\Google\\Chrome\\User Data";
-
-  const browser = await chromium.launchPersistentContext(userDataDir, {
+  // 🚀 Abrir navegador
+  const browser = await chromium.launch({
     headless: false,
-    channel: 'chrome',
     args: ["--start-maximized"]
   });
 
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   console.log("🌐 Abriendo Instagram...");
-
   await page.goto('https://www.instagram.com/');
-  await page.waitForTimeout(5000);
 
-  const username = "marvel";
+  // =============================
+  // 🔐 LOGIN MANUAL (CONTROL TOTAL)
+  // =============================
+  console.log("👉 Inicia sesión manualmente en Instagram");
+  console.log("👉 Cuando termines, presiona ENTER aquí en la consola");
 
-  await page.goto(`https://www.instagram.com/${username}/`, {
-    waitUntil: 'networkidle'
+  await new Promise(resolve => {
+    process.stdin.once('data', resolve);
   });
 
-  await page.waitForTimeout(5000);
+  console.log("✅ Continuando... guardando cookies");
 
   // =============================
-  // 📊 DATOS PERFIL (DOM - simple)
+  // 🍪 GUARDAR COOKIES + STORAGE
   // =============================
-  const data = await page.evaluate(() => {
-    try {
-      const header = document.querySelector('header');
-      const username = header.querySelector('h2')?.innerText;
-      const spans = header.querySelectorAll('ul li span');
+  const storage = await context.storageState();
 
-      return {
-        username,
-        publicaciones: spans[0]?.innerText,
-        seguidores: spans[1]?.innerText,
-        seguidos: spans[2]?.innerText
-      };
-    } catch {
-      return null;
-    }
-  });
+  fs.writeFileSync(
+    'cookies.json',
+    JSON.stringify(storage, null, 2)
+  );
 
-  console.log("📊 DATOS:");
-  console.log(data);
+  console.log("🍪 Cookies completas guardadas en cookies_completas.json");
 
   // =============================
-  // 📸 POSTS (DOM - links)
+  // 🔍 VERIFICACIÓN (opcional)
   // =============================
-  const posts = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('article a'))
-      .slice(0, 10)
-      .map(a => a.href);
-  });
+  const cookies = storage.cookies.map(c => c.name);
 
-  console.log("📸 POSTS:");
-  console.log(posts);
-
-  // =============================
-  // 💾 GUARDAR JSON (CLAVE)
-  // =============================
-  try {
-    const resultado = {
-      perfil: data,
-      posts: posts
-    };
-
-    fs.writeFileSync(
-      'datos_instagram.json',
-      JSON.stringify(resultado, null, 2)
-    );
-
-    console.log("💾 Archivo creado: datos_instagram.json");
-
-  } catch (err) {
-    console.log("❌ Error guardando archivo:", err);
+  if (cookies.includes('sessionid')) {
+    console.log("✅ Login exitoso: sessionid encontrada");
+  } else {
+    console.log("⚠️ No se encontró sessionid (puede que no estés logueado)");
   }
 
+  // =============================
+  // ❌ CERRAR
+  // =============================
   await browser.close();
 })();
